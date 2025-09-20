@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Tender Verification on Shardeum</title>
+    <script src="https://cdn.jsdelivr.net/npm/web3@1.8.0/dist/web3.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        #verification-result {
+            margin-top: 20px;
+            padding: 10px;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Verify Tender on Shardeum Blockchain</h1>
+    <p>Tender ID: <span id="tender-id">GEM/2025/B/6397968</span></p>
+    
+    <button id="verify-button" onclick="verifyTenderOnShardeum()">🔐 Connect Wallet & Verify</button>
+    
+    <div id="verification-result"></div>
+    
+    <script>
+        // Get tender ID from URL parameter
+        const urlParams = new URLSearchParams(window.location.search);
+        const tenderId = urlParams.get('id') || "GEM/2025/B/6397968";
+        document.getElementById('tender-id').textContent = tenderId;
+        
+        async function verifyTenderOnShardeum() {
+            document.getElementById('verification-result').innerHTML = "Connecting to wallet...";
+            
+            if (typeof window.ethereum === 'undefined') {
+                document.getElementById('verification-result').innerHTML = 
+                    "❌ MetaMask not found! Please install MetaMask to verify tenders.";
+                return;
+            }
+            
+            try {
+                // Request account access
+                const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+                const account = accounts[0];
+                document.getElementById('verification-result').innerHTML = "Wallet connected! Preparing verification...";
+                
+                // Contract details
+                const contractAddress = '0xA3d16d3b3Ee92D1B578e97BE8DfC13025fE022ba';
+                const contractABI = [
+                    {
+                        "inputs": [
+                            {
+                                "internalType": "string",
+                                "name": "tenderId",
+                                "type": "string"
+                            }
+                        ],
+                        "name": "verifyTender",
+                        "outputs": [],
+                        "stateMutability": "nonpayable",
+                        "type": "function"
+                    }
+                ];
+                
+                // Create Web3 instance
+                const web3 = new Web3(window.ethereum);
+                const contract = new web3.eth.Contract(contractABI, contractAddress);
+                
+                // Call contract
+                document.getElementById('verification-result').innerHTML = "Sending transaction to Shardeum...";
+                const tx = await contract.methods.verifyTender(tenderId).send({ from: account });
+                
+                // Get transaction hash
+                const txHash = tx.transactionHash;
+                const explorerLink = "https://explorer-unstable.shardeum.org/tx/" + txHash;
+                
+                // Reply with success message
+                document.getElementById('verification-result').innerHTML = 
+                    `✅ Tender verified on Shardeum blockchain!<br><br>
+                    Transaction: <a href="${explorerLink}" target="_blank">View on Explorer</a><br><br>
+                    This tender is now immutably recorded and tamper-proof.`;
+                
+                // Hide the button after verification
+                document.getElementById('verify-button').style.display = 'none';
+                
+            } catch (error) {
+                document.getElementById('verification-result').innerHTML = 
+                    "❌ Error: " + error.message;
+            }
+        }
+    </script>
+</body>
+</html>
