@@ -9,43 +9,90 @@
             max-width: 800px;
             margin: 0 auto;
             padding: 20px;
+            text-align: center;
+        }
+        .container {
+            margin: 30px auto;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            background-color: #f9f9f9;
         }
         button {
             background-color: #4CAF50;
             color: white;
-            padding: 10px 20px;
+            padding: 12px 24px;
             border: none;
             border-radius: 4px;
             cursor: pointer;
             font-size: 16px;
+            margin-top: 20px;
+        }
+        input[type="text"] {
+            padding: 12px;
+            width: 80%;
+            margin: 10px auto;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+            font-size: 16px;
         }
         #verification-result {
             margin-top: 20px;
-            padding: 10px;
+            padding: 15px;
             border-radius: 4px;
+            text-align: left;
+            background-color: #fff;
+            border: 1px solid #eee;
+        }
+        h1 {
+            color: #333;
+        }
+        .success {
+            color: #4CAF50;
+            font-weight: bold;
+        }
+        .error {
+            color: #f44336;
+            font-weight: bold;
         }
     </style>
 </head>
 <body>
-    <h1>Verify Tender on Shardeum Blockchain</h1>
-    <p>Tender ID: <span id="tender-id">GEM/2025/B/6397968</span></p>
+    <h1>Verify Any Tender on Shardeum Blockchain</h1>
     
-    <button id="verify-button" onclick="verifyTenderOnShardeum()">🔐 Connect Wallet & Verify</button>
-    
-    <div id="verification-result"></div>
+    <div class="container">
+        <h2>Enter Tender ID</h2>
+        <input type="text" id="tender-id" placeholder="Enter Tender ID (e.g., GEM/2025/B/6397968)" value="">
+        <button id="verify-button" onclick="verifyTenderOnShardeum()">🔐 Connect Wallet & Verify on Shardeum</button>
+        <div id="verification-result"></div>
+    </div>
     
     <script>
-        // Get tender ID from URL parameter
-        const urlParams = new URLSearchParams(window.location.search);
-        const tenderId = urlParams.get('id') || "GEM/2025/B/6397968";
-        document.getElementById('tender-id').textContent = tenderId;
+        // Check for tender ID in URL
+        window.onload = function() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const tenderId = urlParams.get('id');
+            
+            if (tenderId) {
+                document.getElementById('tender-id').value = tenderId;
+            }
+        };
         
+        // Verify tender on Shardeum blockchain
         async function verifyTenderOnShardeum() {
-            document.getElementById('verification-result').innerHTML = "Connecting to wallet...";
+            const tenderId = document.getElementById('tender-id').value.trim();
+            
+            if (!tenderId) {
+                document.getElementById('verification-result').innerHTML = 
+                    "<p class='error'>Please enter a Tender ID</p>";
+                return;
+            }
+            
+            document.getElementById('verification-result').innerHTML = "<p>Connecting to wallet...</p>";
             
             if (typeof window.ethereum === 'undefined') {
                 document.getElementById('verification-result').innerHTML = 
-                    "❌ MetaMask not found! Please install MetaMask to verify tenders.";
+                    "<p class='error'>❌ MetaMask not found! Please install MetaMask to verify tenders.</p>";
                 return;
             }
             
@@ -53,7 +100,20 @@
                 // Request account access
                 const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
                 const account = accounts[0];
-                document.getElementById('verification-result').innerHTML = "Wallet connected! Preparing verification...";
+                document.getElementById('verification-result').innerHTML = "<p>Wallet connected! Preparing verification...</p>";
+                
+                // Check if connected to Shardeum network
+                const chainId = await window.ethereum.request({ method: 'eth_chainId' });
+                if (chainId !== '0x1f90') { // Shardeum Unstablenet Chain ID: 8080 (0x1f90)
+                    document.getElementById('verification-result').innerHTML = 
+                        "<p class='error'>Please connect to Shardeum Unstablenet in MetaMask.</p>" +
+                        "<p>Network details:<br>" +
+                        "Network Name: Shardeum Unstablenet<br>" +
+                        "RPC URL: https://api-unstable.shardeum.org<br>" +
+                        "Chain ID: 8080<br>" +
+                        "Symbol: SHM</p>";
+                    return;
+                }
                 
                 // Contract details
                 const contractAddress = '0xA3d16d3b3Ee92D1B578e97BE8DfC13025fE022ba';
@@ -78,7 +138,7 @@
                 const contract = new web3.eth.Contract(contractABI, contractAddress);
                 
                 // Call contract
-                document.getElementById('verification-result').innerHTML = "Sending transaction to Shardeum...";
+                document.getElementById('verification-result').innerHTML = "<p>Sending transaction to Shardeum...</p>";
                 const tx = await contract.methods.verifyTender(tenderId).send({ from: account });
                 
                 // Get transaction hash
@@ -87,16 +147,22 @@
                 
                 // Reply with success message
                 document.getElementById('verification-result').innerHTML = 
-                    `✅ Tender verified on Shardeum blockchain!<br><br>
-                    Transaction: <a href="${explorerLink}" target="_blank">View on Explorer</a><br><br>
-                    This tender is now immutably recorded and tamper-proof.`;
-                
-                // Hide the button after verification
-                document.getElementById('verify-button').style.display = 'none';
+                    `<p class='success'>✅ Tender verified on Shardeum blockchain!</p>
+                    <p><strong>Tender ID:</strong> ${tenderId}</p>
+                    <p><strong>Transaction:</strong> <a href="${explorerLink}" target="_blank">View on Explorer</a></p>
+                    <p><strong>Verified by:</strong> ${account}</p>
+                    <p><strong>Status:</strong> This tender is now immutably recorded and tamper-proof.</p>
+                    <p><strong>Benefits:</strong></p>
+                    <ul>
+                        <li>Tamper-proof record</li>
+                        <li>Public verification</li>
+                        <li>Increased trust</li>
+                        <li>Reduced fraud</li>
+                    </ul>`;
                 
             } catch (error) {
                 document.getElementById('verification-result').innerHTML = 
-                    "❌ Error: " + error.message;
+                    `<p class='error'>❌ Error: ${error.message}</p>`;
             }
         }
     </script>
